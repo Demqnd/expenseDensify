@@ -49,8 +49,32 @@ function initSchema() {
   seedUsers();
 }
 
+/**
+ * Hash a password using scrypt with a random salt.
+ * Returns a string in the format "salt:hash" (both hex-encoded).
+ */
 function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+/**
+ * Verify a password against a stored "salt:hash" string.
+ * Uses a constant-time comparison to prevent timing attacks.
+ */
+function verifyPassword(password, stored) {
+  const [salt, storedHash] = stored.split(':');
+  if (!salt || !storedHash) return false;
+  try {
+    const derived = crypto.scryptSync(password, salt, 64);
+    const storedBuf = Buffer.from(storedHash, 'hex');
+    // timingSafeEqual requires equal-length buffers
+    if (derived.length !== storedBuf.length) return false;
+    return crypto.timingSafeEqual(derived, storedBuf);
+  } catch {
+    return false;
+  }
 }
 
 function seedUsers() {
@@ -75,4 +99,4 @@ function seedUsers() {
   insertMany(seedData);
 }
 
-module.exports = { getDb, hashPassword };
+module.exports = { getDb, hashPassword, verifyPassword };

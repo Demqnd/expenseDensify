@@ -1,8 +1,9 @@
 'use strict';
 
-const express = require('express');
-const path    = require('path');
-const { getDb, hashPassword } = require('./database');
+const express   = require('express');
+const path      = require('path');
+const rateLimit = require('express-rate-limit');
+const { getDb, verifyPassword } = require('./database');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -11,10 +12,34 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ──────────────────────────────────────────────
+// Rate limiting
+// ──────────────────────────────────────────────
+
+// Strict limit for login to prevent brute-force attacks
+const loginLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000, // 15 minutes
+  max:              20,
+  standardHeaders:  true,
+  legacyHeaders:    false,
+  message:          { error: 'Too many login attempts. Please try again later.' },
+});
+
+// General API rate limiter
+const apiLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000,
+  max:              200,
+  standardHeaders:  true,
+  legacyHeaders:    false,
+  message:          { error: 'Too many requests. Please try again later.' },
+});
+
+app.use('/api/', apiLimiter);
+
+// ──────────────────────────────────────────────
 // Auth
 // ──────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -23,7 +48,8 @@ app.post('/api/auth/login', (req, res) => {
   const db   = getDb();
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
 
-  if (!user || user.password !== hashPassword(password)) {
+  // Use constant-time comparison via verifyPassword to prevent timing attacks
+  if (!user || !verifyPassword(password, user.password)) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
