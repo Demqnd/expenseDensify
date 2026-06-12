@@ -1,0 +1,27 @@
+{
+  "name": "expensedensify",
+  "version": "1.0.0",
+  "description": "Expense Program For Companies",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test server.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Demqnd/ExpenseDensify.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Demqnd/ExpenseDensify/issues"
+  },
+  "homepage": "https://github.com/Demqnd/ExpenseDensify#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2"
+  }
+}

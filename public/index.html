@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExpenseDensify</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     LOGIN VIEW
+════════════════════════════════════════════ -->
+<div id="view-login" class="login-wrapper">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>💼 ExpenseDensify</h1>
+      <p>Expense Reimbursement Portal</p>
+    </div>
+
+    <div id="login-alert" class="alert alert-error hidden"></div>
+
+    <div class="demo-hint">
+      <strong>Demo accounts (password: <code>password123</code>)</strong><br>
+      <strong>Employees:</strong> alice@densify.com · bob@densify.com · carol@densify.com<br>
+      <strong>Managers:</strong> david@densify.com · emma@densify.com
+    </div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="login-email">Email</label>
+        <input class="form-control" id="login-email" type="email" placeholder="you@densify.com" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="login-password">Password</label>
+        <input class="form-control" id="login-password" type="password" placeholder="••••••••" required />
+      </div>
+      <button class="btn btn-primary btn-full mt-4" type="submit" id="login-btn">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP VIEW (after login)
+════════════════════════════════════════════ -->
+<div id="view-app" class="page hidden">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-7-7h2v2h-2zm-4 0h2v2H9z"/>
+      </svg>
+      ExpenseDensify
+    </div>
+    <div class="navbar-user">
+      <span id="nav-user-name"></span>
+      <span id="nav-user-role" class="badge-role"></span>
+      <button class="btn btn-ghost btn-sm" id="logout-btn">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- ── EMPLOYEE DASHBOARD ───────────────── -->
+    <div id="employee-dashboard" class="hidden">
+
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="submit">Submit Expense</button>
+        <button class="tab-btn" data-tab="my-expenses">My Submissions</button>
+      </div>
+
+      <!-- Tab: Submit -->
+      <div id="tab-submit">
+        <div class="card">
+          <div class="card-header">
+            <h2>New Expense Request</h2>
+          </div>
+          <div id="expense-form-alert" class="hidden"></div>
+          <form id="expense-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="exp-date">Date of Expense *</label>
+                <input class="form-control" id="exp-date" type="date" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="exp-category">Category *</label>
+                <select class="form-control" id="exp-category" required>
+                  <option value="">— Select —</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Meals &amp; Entertainment">Meals &amp; Entertainment</option>
+                  <option value="Accommodation">Accommodation</option>
+                  <option value="Office Supplies">Office Supplies</option>
+                  <option value="Software &amp; Subscriptions">Software &amp; Subscriptions</option>
+                  <option value="Training &amp; Education">Training &amp; Education</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="exp-description">Description *</label>
+              <input class="form-control" id="exp-description" type="text"
+                     placeholder="Brief description of the expense" required maxlength="250" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="exp-amount">Amount (USD) *</label>
+                <input class="form-control" id="exp-amount" type="number" min="0.01"
+                       step="0.01" placeholder="0.00" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="exp-receipt">Receipt / Notes</label>
+                <input class="form-control" id="exp-receipt" type="text"
+                       placeholder="Receipt reference or notes (optional)" maxlength="500" />
+              </div>
+            </div>
+            <button class="btn btn-primary" type="submit" id="submit-expense-btn">Submit for Approval</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab: My Expenses -->
+      <div id="tab-my-expenses" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <h2>My Expense Submissions</h2>
+            <button class="btn btn-ghost btn-sm" id="refresh-my-expenses">↻ Refresh</button>
+          </div>
+          <div id="my-expenses-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MANAGER DASHBOARD ────────────────── -->
+    <div id="manager-dashboard" class="hidden">
+
+      <div id="stats-row" class="stats-grid"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Expense Requests</h2>
+          <button class="btn btn-ghost btn-sm" id="refresh-all-expenses">↻ Refresh</button>
+        </div>
+
+        <div class="filter-bar">
+          <select id="filter-status">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select id="filter-category">
+            <option value="">All Categories</option>
+            <option value="Travel">Travel</option>
+            <option value="Meals &amp; Entertainment">Meals &amp; Entertainment</option>
+            <option value="Accommodation">Accommodation</option>
+            <option value="Office Supplies">Office Supplies</option>
+            <option value="Software &amp; Subscriptions">Software &amp; Subscriptions</option>
+            <option value="Training &amp; Education">Training &amp; Education</option>
+            <option value="Other">Other</option>
+          </select>
+          <input id="filter-search" type="text" placeholder="Search employee or description…" style="min-width:200px;" />
+        </div>
+
+        <div id="all-expenses-body"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     REVIEW MODAL (manager)
+════════════════════════════════════════════ -->
+<div id="review-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2 id="review-modal-title">Review Expense</h2>
+    <div id="review-expense-details" class="text-sm" style="color:var(--gray-700);margin-bottom:1rem;line-height:1.7;"></div>
+    <div class="form-group">
+      <label class="form-label" for="review-note">Manager Note (optional)</label>
+      <textarea class="form-control" id="review-note" rows="3"
+                placeholder="Add a note for the employee…" maxlength="500"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost"    id="modal-cancel">Cancel</button>
+      <button class="btn btn-danger"   id="modal-reject">Reject</button>
+      <button class="btn btn-success"  id="modal-approve">Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     DETAIL MODAL (employee read-only)
+════════════════════════════════════════════ -->
+<div id="detail-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2>Expense Details</h2>
+    <div id="detail-expense-content" style="line-height:1.8;font-size:.92rem;color:var(--gray-700);"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="detail-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
