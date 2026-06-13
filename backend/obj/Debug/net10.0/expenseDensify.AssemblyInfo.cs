@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("expenseDensify")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+09e9504ebff19e047cc73e32c6ddfc7bc5da5f19")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+172dc35810932dde7378b5877afee34bb8753813")]
 [assembly: System.Reflection.AssemblyProductAttribute("expenseDensify")]
 [assembly: System.Reflection.AssemblyTitleAttribute("expenseDensify")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

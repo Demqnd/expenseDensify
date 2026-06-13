@@ -1,9 +1,34 @@
+using System.Text;
+using expenseDensify.Config;
+using expenseDensify.Data;
+using expenseDensify.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token. Example: eyJhbGciOi..."
+    });
 
-// CORS configuration
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document, null)] = new List<string>()
+    });
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -14,11 +39,43 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
+    ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+        };
+    });
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
