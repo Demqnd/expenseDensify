@@ -19,6 +19,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasIndex(u => u.Email).IsUnique();
             entity.Property(u => u.Email).IsRequired().HasMaxLength(255);
             entity.Property(u => u.PasswordHash).IsRequired();
+            entity.Property(u => u.PasswordResetCodeHash).HasMaxLength(255);
+            entity.Property(u => u.PasswordResetCodeExpiresUtc);
             entity.Property(u => u.CreatedAtUtc).IsRequired();
         });
 

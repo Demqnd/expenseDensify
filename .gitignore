@@ -1,0 +1,14 @@
+# .NET build artifacts
+backend/bin/
+backend/obj/
+
+# Node dependencies and build artifacts
+frontend/node_modules/
+frontend/.next/
+
+# Local logs and temp files
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

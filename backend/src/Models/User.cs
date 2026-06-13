@@ -11,6 +11,10 @@ public class User
 
     public string PasswordHash { get; set; } = string.Empty;
 
+    public string? PasswordResetCodeHash { get; set; }
+
+    public DateTime? PasswordResetCodeExpiresUtc { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public ICollection<Expense> Expenses { get; set; } = new List<Expense>();
