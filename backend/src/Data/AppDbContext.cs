@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(u => u.PasswordResetCodeHash).HasMaxLength(255);
             entity.Property(u => u.PasswordResetCodeExpiresUtc);
             entity.Property(u => u.CreatedAtUtc).IsRequired();
+            entity.Property(u => u.Role).IsRequired().HasMaxLength(30).HasDefaultValue(UserRoles.Employee);
         });
 
         modelBuilder.Entity<Expense>(entity =>
@@ -33,6 +34,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.ExpenseDateUtc).IsRequired();
             entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue(Expense.DraftStatus);
+            entity.Property(e => e.ReviewedAtUtc);
+            entity.Property(e => e.ReviewedByUserId);
+            entity.Property(e => e.ReviewComment).HasMaxLength(500);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ExpenseDateUtc);

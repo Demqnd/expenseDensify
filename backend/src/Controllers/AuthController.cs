@@ -3,6 +3,7 @@ using expenseKubex.Contracts.Auth;
 using expenseKubex.Data;
 using expenseKubex.Models;
 using expenseKubex.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,14 +31,15 @@ public class AuthController(
         var user = new User
         {
             Email = normalizedEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = await dbContext.Users.AnyAsync() ? UserRoles.Employee : UserRoles.Admin
         };
 
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         var token = jwtTokenService.CreateToken(user);
-        return Ok(new AuthResponse { Token = token, Email = user.Email });
+        return Ok(new AuthResponse { Token = token, Email = user.Email, Role = user.Role });
     }
 
     [HttpPost("login")]
@@ -52,7 +54,40 @@ public class AuthController(
         }
 
         var token = jwtTokenService.CreateToken(user);
-        return Ok(new AuthResponse { Token = token, Email = user.Email });
+        return Ok(new AuthResponse { Token = token, Email = user.Email, Role = user.Role });
+    }
+
+    [HttpPost("users/role")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUserRole(UpdateUserRoleRequest request)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var normalizedRole = request.Role.Trim();
+
+        var allowedRoles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            UserRoles.Employee,
+            UserRoles.Manager,
+            UserRoles.Hr,
+            UserRoles.Finance,
+            UserRoles.Admin
+        };
+
+        if (!allowedRoles.Contains(normalizedRole))
+        {
+            return BadRequest(new { message = "Invalid role. Allowed: Employee, Manager, Hr, Finance, Admin." });
+        }
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        if (user is null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        user.Role = allowedRoles.First(role => role.Equals(normalizedRole, StringComparison.OrdinalIgnoreCase));
+        await dbContext.SaveChangesAsync();
+
+        return Ok(new { message = $"Role updated to {user.Role} for {user.Email}." });
     }
 
     [HttpPost("forgot-password")]

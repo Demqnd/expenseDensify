@@ -7,6 +7,7 @@ import { FormEvent, useMemo, useState } from "react";
 type AuthSuccess = {
   token: string;
   email: string;
+  role: string;
 };
 
 type ApiError = {
@@ -57,6 +58,7 @@ export default function LoginPage() {
       const auth = json as AuthSuccess;
       localStorage.setItem("expenseKubex.token", auth.token);
       localStorage.setItem("expenseKubex.email", auth.email);
+      localStorage.setItem("expenseKubex.role", auth.role);
       setSuccess("Login successful. Redirecting...");
       setTimeout(() => router.push("/"), 500);
     } catch {

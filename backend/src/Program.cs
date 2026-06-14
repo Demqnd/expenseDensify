@@ -1,6 +1,7 @@
 using System.Text;
 using expenseKubex.Config;
 using expenseKubex.Data;
+using expenseKubex.Models;
 using expenseKubex.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+builder.Services.AddHttpClient("OcrService", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailSender, GmailSmtpEmailSender>();
 
@@ -74,6 +79,29 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
+    dbContext.Database.ExecuteSqlRaw($"ALTER TABLE expenses ADD COLUMN IF NOT EXISTS \"Status\" character varying(20) NOT NULL DEFAULT '{Expense.DraftStatus}';");
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE expenses
+        ADD COLUMN IF NOT EXISTS ""ReviewedAtUtc"" timestamp with time zone NULL;
+    ");
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE expenses
+        ADD COLUMN IF NOT EXISTS ""ReviewedByUserId"" uuid NULL;
+    ");
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE expenses
+        ADD COLUMN IF NOT EXISTS ""ReviewComment"" character varying(500) NULL;
+    ");
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS ""Role"" character varying(30) NOT NULL DEFAULT 'Employee';
+    ");
+
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        UPDATE users
+        SET ""Role"" = 'Employee'
+        WHERE ""Role"" IS NULL OR ""Role"" = '';
+    ");
 }
 
 app.UseSwagger();

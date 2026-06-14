@@ -17,5 +17,8 @@ public class User
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
+    [MaxLength(30)]
+    public string Role { get; set; } = UserRoles.Employee;
+
     public ICollection<Expense> Expenses { get; set; } = new List<Expense>();
 }

@@ -6,6 +6,10 @@ public class ExpenseResponse
     public decimal Amount { get; set; }
     public string Category { get; set; } = string.Empty;
     public string? Note { get; set; }
+    public string Status { get; set; } = "Draft";
+    public DateTime? ReviewedAtUtc { get; set; }
+    public Guid? ReviewedByUserId { get; set; }
+    public string? ReviewComment { get; set; }
     public DateTime ExpenseDateUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
