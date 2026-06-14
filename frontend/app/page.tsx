@@ -24,11 +24,26 @@ type CreateExpensePayload = {
   expenseDateUtc: string;
 };
 
+type OcrExtractResponse = {
+  merchant?: string | null;
+  date?: string | null;
+  total_amount?: number | null;
+  currency?: string | null;
+  category?: string | null;
+  confidence?: number | null;
+  raw_text?: string | null;
+};
+
 const defaultApiBaseUrl = "http://localhost:5000";
+const defaultOcrApiBaseUrl = "http://localhost:8010";
 
 export default function Home() {
   const apiBaseUrl = useMemo(
     () => process.env.NEXT_PUBLIC_API_BASE_URL ?? defaultApiBaseUrl,
+    []
+  );
+  const ocrApiBaseUrl = useMemo(
+    () => process.env.NEXT_PUBLIC_OCR_API_BASE_URL ?? defaultOcrApiBaseUrl,
     []
   );
 
@@ -54,6 +69,10 @@ export default function Home() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [ocrSuccess, setOcrSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("expenseKubex.token");
@@ -177,6 +196,98 @@ export default function Home() {
     }
   }
 
+  function normalizeDate(input?: string | null): string | null {
+    if (!input) {
+      return null;
+    }
+
+    const trimmed = input.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(trimmed)) {
+      return trimmed.replaceAll("/", "-");
+    }
+
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    const year = parsed.getUTCFullYear();
+    const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  async function onScanReceipt() {
+    setOcrError(null);
+    setOcrSuccess(null);
+
+    if (!token) {
+      setOcrError("You need to sign in first.");
+      return;
+    }
+
+    if (!receiptFile) {
+      setOcrError("Please choose a receipt image first.");
+      return;
+    }
+
+    setOcrLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", receiptFile);
+
+      const response = await fetch(`${ocrApiBaseUrl}/receipt/extract`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        setOcrError("Could not read receipt. Check OCR service and try again.");
+        return;
+      }
+
+      const extracted = (await response.json()) as OcrExtractResponse;
+
+      const extractedAmount = Number(extracted.total_amount);
+      const hasAmount = Number.isFinite(extractedAmount) && extractedAmount > 0;
+      if (hasAmount) {
+        setAmount(extractedAmount.toFixed(2));
+      }
+
+      const extractedCategory = extracted.category?.trim();
+      if (extractedCategory) {
+        setCategory(extractedCategory);
+      }
+
+      const normalizedDate = normalizeDate(extracted.date);
+      if (normalizedDate) {
+        setExpenseDate(normalizedDate);
+      }
+
+      const noteParts = [
+        extracted.merchant?.trim(),
+        extracted.currency ? `Currency: ${extracted.currency}` : null,
+      ].filter(Boolean);
+      const nextNote = noteParts.length ? noteParts.join(" | ") : (note || "");
+      setNote(nextNote);
+
+      setOcrSuccess("Receipt scanned and form auto-filled. Review and click Save.");
+    } catch {
+      setOcrError("Could not connect to OCR/API service.");
+    } finally {
+      setOcrLoading(false);
+    }
+  }
+
   const total = expenses.reduce((sum, item) => sum + item.amount, 0);
 
   if (!authReady) {
@@ -287,6 +398,30 @@ export default function Home() {
 
         <section className="panel panel-form">
           <h2 className="panel-title">Add Expense</h2>
+
+          <div style={{ marginBottom: 16 }}>
+            <label>
+              Receipt Image (OCR)
+              <input
+                className="dashboard-input"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/bmp,image/tiff"
+                onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button
+              className="auth-button"
+              type="button"
+              onClick={onScanReceipt}
+              disabled={ocrLoading}
+              style={{ marginTop: 10 }}
+            >
+              {ocrLoading ? "Scanning receipt..." : "Scan Receipt and Autofill"}
+            </button>
+            {ocrError ? <p className="auth-banner error">{ocrError}</p> : null}
+            {ocrSuccess ? <p className="auth-banner success">{ocrSuccess}</p> : null}
+          </div>
+
           <form className="expense-form" onSubmit={onCreateExpense}>
             <label>
               Date
