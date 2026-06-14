@@ -1,11 +1,11 @@
 # Document 1 – Project Charter
 Modified June 12
 
-# expenseDensify
+# expenseKubex
 
 ## Project Summary
 
-expenseDensify is an AI-assisted expense tracking application built to gain hands-on experience with the complete Software Development Life Cycle (SDLC).
+expenseKubex is an AI-assisted expense tracking application built to gain hands-on experience with the complete Software Development Life Cycle (SDLC).
 
 The application will allow users to upload receipts, extract information using OCR and AI, and manage expenses through a web application.
 

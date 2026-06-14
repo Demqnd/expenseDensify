@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    setEmail(localStorage.getItem("expenseDensify.email") ?? "");
+    setEmail(localStorage.getItem("expenseKubex.email") ?? "");
   }, []);
 
   return (

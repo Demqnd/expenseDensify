@@ -1,11 +1,11 @@
 # Document 3 – Architecture Document
 # Modified June 12
 
-# expenseDensify
+# expenseKubex
 
 ## Purpose
 
-The purpose of this document is to define the technical architecture of expenseDensify.
+The purpose of this document is to define the technical architecture of expenseKubex.
 
 This document explains how the system will be structured, how components interact, and why technologies were selected.
 
@@ -15,7 +15,7 @@ The goal is to establish a blueprint before implementation begins.
 
 # Architecture Overview
 
-expenseDensify follows a multi-layer architecture.
+expenseKubex follows a multi-layer architecture.
 
 The application consists of:
 

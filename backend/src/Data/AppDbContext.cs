@@ -1,7 +1,7 @@
-using expenseDensify.Models;
+using expenseKubex.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace expenseDensify.Data;
+namespace expenseKubex.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {

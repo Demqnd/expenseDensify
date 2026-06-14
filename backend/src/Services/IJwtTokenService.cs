@@ -1,6 +1,6 @@
-using expenseDensify.Models;
+using expenseKubex.Models;
 
-namespace expenseDensify.Services;
+namespace expenseKubex.Services;
 
 public interface IJwtTokenService
 {

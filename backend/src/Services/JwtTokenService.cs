@@ -1,12 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using expenseDensify.Config;
-using expenseDensify.Models;
+using expenseKubex.Config;
+using expenseKubex.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace expenseDensify.Services;
+namespace expenseKubex.Services;
 
 public class JwtTokenService(IOptions<JwtSettings> jwtOptions) : IJwtTokenService
 {

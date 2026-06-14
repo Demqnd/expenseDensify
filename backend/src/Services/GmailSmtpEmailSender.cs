@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Mail;
-using expenseDensify.Config;
+using expenseKubex.Config;
 using Microsoft.Extensions.Options;
 
-namespace expenseDensify.Services;
+namespace expenseKubex.Services;
 
 public class GmailSmtpEmailSender(IOptions<GmailSmtpSettings> gmailOptions) : IEmailSender
 {
@@ -22,7 +22,7 @@ public class GmailSmtpEmailSender(IOptions<GmailSmtpSettings> gmailOptions) : IE
         using var message = new MailMessage
         {
             From = new MailAddress(_settings.FromEmail.Trim(), _settings.FromName.Trim()),
-            Subject = "Your ExpenseDensify password reset code",
+            Subject = "Your ExpenseKubex password reset code",
             Body = $"Use this code to reset your password: {code}. This code expires in 15 minutes.",
             IsBodyHtml = false
         };

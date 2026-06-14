@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace expenseDensify.Controllers;
+namespace expenseKubex.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

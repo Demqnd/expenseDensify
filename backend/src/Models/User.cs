@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace expenseDensify.Models;
+namespace expenseKubex.Models;
 
 public class User
 {

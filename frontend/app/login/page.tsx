@@ -55,8 +55,8 @@ export default function LoginPage() {
       }
 
       const auth = json as AuthSuccess;
-      localStorage.setItem("expenseDensify.token", auth.token);
-      localStorage.setItem("expenseDensify.email", auth.email);
+      localStorage.setItem("expenseKubex.token", auth.token);
+      localStorage.setItem("expenseKubex.email", auth.email);
       setSuccess("Login successful. Redirecting...");
       setTimeout(() => router.push("/"), 500);
     } catch {

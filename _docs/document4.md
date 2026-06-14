@@ -1,11 +1,11 @@
 # Document 4 – Database Design
 # Modified June 12
 
-# expenseDensify
+# expenseKubex
 
 ## Purpose
 
-The purpose of this document is to define the database design for expenseDensify.
+The purpose of this document is to define the database design for expenseKubex.
 
 This document explains what data will be stored, how tables relate to each other, and how the database supports the application requirements.
 
@@ -15,7 +15,7 @@ The goal is to create a simple relational database structure before backend deve
 
 # Database Overview
 
-expenseDensify will use a relational database.
+expenseKubex will use a relational database.
 
 The selected database is PostgreSQL.
 

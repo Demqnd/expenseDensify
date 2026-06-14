@@ -1,4 +1,4 @@
-# expenseDensify
+# expenseKubex
 
 AI-assisted expense tracking system built to learn the complete Software Development Life Cycle (SDLC).
 
@@ -73,7 +73,7 @@ Current planned functionality:
 # Project Structure
 
 ```text
-expenseDensify/
+expenseKubex/
 
 docs/
 frontend/

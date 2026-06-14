@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace expenseDensify.Contracts.Expenses;
+namespace expenseKubex.Contracts.Expenses;
 
 public class UpdateExpenseRequest
 {

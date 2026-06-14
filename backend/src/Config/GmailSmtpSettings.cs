@@ -1,4 +1,4 @@
-namespace expenseDensify.Config;
+namespace expenseKubex.Config;
 
 public class GmailSmtpSettings
 {
@@ -14,5 +14,5 @@ public class GmailSmtpSettings
 
     public string FromEmail { get; set; } = string.Empty;
 
-    public string FromName { get; set; } = "ExpenseDensify";
+    public string FromName { get; set; } = "ExpenseKubex";
 }

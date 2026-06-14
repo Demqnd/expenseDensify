@@ -1,13 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using expenseDensify.Contracts.Expenses;
-using expenseDensify.Data;
-using expenseDensify.Models;
+using expenseKubex.Contracts.Expenses;
+using expenseKubex.Data;
+using expenseKubex.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace expenseDensify.Controllers;
+namespace expenseKubex.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

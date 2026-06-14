@@ -1,12 +1,12 @@
 using System.Security.Cryptography;
-using expenseDensify.Contracts.Auth;
-using expenseDensify.Data;
-using expenseDensify.Models;
-using expenseDensify.Services;
+using expenseKubex.Contracts.Auth;
+using expenseKubex.Data;
+using expenseKubex.Models;
+using expenseKubex.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace expenseDensify.Controllers;
+namespace expenseKubex.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -59,10 +59,12 @@ public class AuthController(
     public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        logger.LogInformation("Forgot password requested for {Email}", normalizedEmail);
 
         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
         if (user is null)
         {
+            logger.LogInformation("Forgot password skipped: no matching user for {Email}", normalizedEmail);
             return Ok(new { message = "If that email exists, a reset code has been sent." });
         }
 
@@ -75,6 +77,7 @@ public class AuthController(
         try
         {
             await emailSender.SendPasswordResetCodeAsync(user.Email, code);
+            logger.LogInformation("Password reset email sent to {Email}", user.Email);
         }
         catch (Exception ex)
         {
@@ -88,14 +91,8 @@ public class AuthController(
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
     {
-        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-
-        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
-        if (user is null ||
-            string.IsNullOrWhiteSpace(user.PasswordResetCodeHash) ||
-            user.PasswordResetCodeExpiresUtc is null ||
-            user.PasswordResetCodeExpiresUtc <= DateTime.UtcNow ||
-            !BCrypt.Net.BCrypt.Verify(request.Code.Trim(), user.PasswordResetCodeHash))
+        var user = await FindUserWithValidResetCodeAsync(request.Email, request.Code);
+        if (user is null)
         {
             return BadRequest(new { message = "Invalid or expired code." });
         }
@@ -107,6 +104,36 @@ public class AuthController(
         await dbContext.SaveChangesAsync();
 
         return Ok(new { message = "Password reset successful." });
+    }
+
+    [HttpPost("verify-reset-code")]
+    public async Task<IActionResult> VerifyResetCode(VerifyResetCodeRequest request)
+    {
+        var user = await FindUserWithValidResetCodeAsync(request.Email, request.Code);
+        if (user is null)
+        {
+            return BadRequest(new { message = "Invalid or expired code." });
+        }
+
+        return Ok(new { message = "Code verified." });
+    }
+
+    private async Task<User?> FindUserWithValidResetCodeAsync(string email, string code)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var normalizedCode = code.Trim();
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        if (user is null ||
+            string.IsNullOrWhiteSpace(user.PasswordResetCodeHash) ||
+            user.PasswordResetCodeExpiresUtc is null ||
+            user.PasswordResetCodeExpiresUtc <= DateTime.UtcNow ||
+            !BCrypt.Net.BCrypt.Verify(normalizedCode, user.PasswordResetCodeHash))
+        {
+            return null;
+        }
+
+        return user;
     }
 
     private static string GenerateSixDigitCode()

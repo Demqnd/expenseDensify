@@ -1,11 +1,11 @@
 # Document 5 – API Design
 # Modified June 12
 
-# expenseDensify
+# expenseKubex
 
 ## Purpose
 
-The purpose of this document is to define the API design for expenseDensify.
+The purpose of this document is to define the API design for expenseKubex.
 
 This document explains how the frontend will communicate with the backend.
 
@@ -15,7 +15,7 @@ The goal is to create a clear API plan before backend development begins.
 
 # API Overview
 
-expenseDensify will use REST APIs.
+expenseKubex will use REST APIs.
 
 The backend will be built using ASP.NET Core Web API.
 

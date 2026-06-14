@@ -1,4 +1,4 @@
-namespace expenseDensify.Services;
+namespace expenseKubex.Services;
 
 public interface IEmailSender
 {

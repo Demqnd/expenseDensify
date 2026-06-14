@@ -1,4 +1,4 @@
-namespace expenseDensify.Contracts.Auth;
+namespace expenseKubex.Contracts.Auth;
 
 public class AuthResponse
 {

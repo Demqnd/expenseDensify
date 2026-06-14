@@ -13,7 +13,7 @@ const bodyFont = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ExpenseDensify Auth",
+  title: "ExpenseKubex Auth",
   description: "Expense tracking application",
 };
 

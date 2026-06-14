@@ -56,8 +56,8 @@ export default function Home() {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("expenseDensify.token");
-    const storedEmail = localStorage.getItem("expenseDensify.email") ?? "";
+    const storedToken = localStorage.getItem("expenseKubex.token");
+    const storedEmail = localStorage.getItem("expenseKubex.email") ?? "";
     setToken(storedToken);
     setEmail(storedEmail);
     setAuthReady(true);
@@ -106,8 +106,8 @@ export default function Home() {
   }, [token, loadExpenses]);
 
   function signOut() {
-    localStorage.removeItem("expenseDensify.token");
-    localStorage.removeItem("expenseDensify.email");
+    localStorage.removeItem("expenseKubex.token");
+    localStorage.removeItem("expenseKubex.email");
     setToken(null);
     setEmail("");
     setExpenses([]);
@@ -187,7 +187,7 @@ export default function Home() {
     return (
       <main className="page-shell">
         <div className="hero">
-          <h1 className="hero-title">Welcome to ExpenseDensify</h1>
+          <h1 className="hero-title">Welcome to ExpenseKubex</h1>
           <p className="hero-subtitle">
             Sign in to manage expenses, or create an account to get started.
           </p>
@@ -207,7 +207,7 @@ export default function Home() {
   return (
     <main className="dashboard-layout">
       <aside className="sidebar">
-        <div className="brand">expenseDensify</div>
+        <div className="brand">expenseKubex</div>
         <nav className="side-nav">
           <button className="side-link active" type="button">Home</button>
           <button className="side-link" type="button">Add Receipts</button>

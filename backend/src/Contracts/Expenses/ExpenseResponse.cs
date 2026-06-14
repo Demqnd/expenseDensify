@@ -1,4 +1,4 @@
-namespace expenseDensify.Contracts.Expenses;
+namespace expenseKubex.Contracts.Expenses;
 
 public class ExpenseResponse
 {

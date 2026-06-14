@@ -67,8 +67,8 @@ export default function SignupPage() {
       }
 
       const auth = json as AuthSuccess;
-      localStorage.setItem("expenseDensify.token", auth.token);
-      localStorage.setItem("expenseDensify.email", auth.email);
+      localStorage.setItem("expenseKubex.token", auth.token);
+      localStorage.setItem("expenseKubex.email", auth.email);
       setSuccess("Account created. Redirecting...");
       setTimeout(() => router.push("/"), 500);
     } catch {
@@ -82,7 +82,7 @@ export default function SignupPage() {
     <main className="page-shell">
       <section className="auth-card" aria-label="Signup form">
         <h1 className="auth-title">Create account</h1>
-        <p className="auth-subtitle">Set up your ExpenseDensify login.</p>
+        <p className="auth-subtitle">Set up your ExpenseKubex login.</p>
 
         <form className="auth-form" onSubmit={onSubmit}>
           <label className="auth-label" htmlFor="email">

@@ -1,7 +1,7 @@
 using System.Text;
-using expenseDensify.Config;
-using expenseDensify.Data;
-using expenseDensify.Services;
+using expenseKubex.Config;
+using expenseKubex.Data;
+using expenseKubex.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -41,8 +41,12 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<GmailSmtpSettings>(builder.Configuration.GetSection("GmailSmtpSettings"));
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailSender, GmailSmtpEmailSender>();
 

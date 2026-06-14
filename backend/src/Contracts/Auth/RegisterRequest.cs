@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace expenseDensify.Contracts.Auth;
+namespace expenseKubex.Contracts.Auth;
 
 public class RegisterRequest
 {

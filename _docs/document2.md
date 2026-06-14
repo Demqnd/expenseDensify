@@ -1,7 +1,7 @@
 # Document 2 – Software Requirements Specification (SRS)
 # Modified June 12
 
-# expenseDensify
+# expenseKubex
 
 ## Introduction
 

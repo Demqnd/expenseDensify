@@ -1,4 +1,4 @@
-namespace expenseDensify.Config;
+namespace expenseKubex.Config;
 
 public class JwtSettings
 {
