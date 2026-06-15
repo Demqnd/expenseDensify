@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<AppRole> Roles => Set<AppRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +47,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(u => u.Expenses)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppRole>(entity =>
+        {
+            entity.ToTable("roles");
+            entity.HasKey(r => r.Id);
+            entity.HasIndex(r => r.Name).IsUnique();
+            entity.Property(r => r.Name).IsRequired().HasMaxLength(50);
+            entity.Property(r => r.Description).HasMaxLength(255);
+            entity.Property(r => r.CanInviteUsers).IsRequired().HasDefaultValue(false);
+            entity.Property(r => r.CanChangeRoles).IsRequired().HasDefaultValue(false);
+            entity.Property(r => r.CreatedAtUtc).IsRequired();
         });
     }
 }

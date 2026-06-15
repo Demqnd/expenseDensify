@@ -23,6 +23,25 @@ type TeamExpense = Expense & {
   userEmail: string;
 };
 
+type AppTab = "home" | "admin";
+type AdminSubTab = "users" | "roles";
+
+type EmployeeUser = {
+  id: string;
+  email: string;
+  role: "Employee" | "Manager" | "Hr" | "Finance" | "Admin" | string;
+  createdAtUtc: string;
+};
+
+type AppRole = {
+  id: number;
+  name: string;
+  description: string | null;
+  canInviteUsers: boolean;
+  canChangeRoles: boolean;
+  createdAtUtc: string;
+};
+
 type ApiError = {
   message?: string;
   detail?: string;
@@ -63,6 +82,10 @@ export default function Home() {
   const [token, setToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
   const [role, setRole] = useState<string>("Employee");
+  const [canInviteUsers, setCanInviteUsers] = useState(false);
+  const [canChangeRoles, setCanChangeRoles] = useState(false);
+  const [activeTab, setActiveTab] = useState<AppTab>("home");
+  const [adminSubTab, setAdminSubTab] = useState<AdminSubTab>("users");
   const [authReady, setAuthReady] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -73,6 +96,29 @@ export default function Home() {
   const [loadingTeamExpenses, setLoadingTeamExpenses] = useState(false);
   const [teamExpensesError, setTeamExpensesError] = useState<string | null>(null);
   const [reviewCommentDrafts, setReviewCommentDrafts] = useState<Record<string, string>>({});
+  const [employees, setEmployees] = useState<EmployeeUser[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<string>("Employee");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [userRoleDrafts, setUserRoleDrafts] = useState<Record<string, string>>({});
+  const [updatingUserEmail, setUpdatingUserEmail] = useState<string | null>(null);
+
+  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [rolesError, setRolesError] = useState<string | null>(null);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
+  const [newRoleCanInviteUsers, setNewRoleCanInviteUsers] = useState(false);
+  const [newRoleCanChangeRoles, setNewRoleCanChangeRoles] = useState(false);
+  const [roleFormLoading, setRoleFormLoading] = useState(false);
+  const [roleFormError, setRoleFormError] = useState<string | null>(null);
+  const [roleFormSuccess, setRoleFormSuccess] = useState<string | null>(null);
+  const [editingRole, setEditingRole] = useState<AppRole | null>(null);
+  const [deletingRoleId, setDeletingRoleId] = useState<number | null>(null);
 
   const [amount, setAmount] = useState("178.54");
   const [category, setCategory] = useState("Telecom");
@@ -114,13 +160,24 @@ export default function Home() {
     const storedToken = localStorage.getItem("expenseKubex.token");
     const storedEmail = localStorage.getItem("expenseKubex.email") ?? "";
     const storedRole = localStorage.getItem("expenseKubex.role") ?? "Employee";
+    const storedCanInvite = localStorage.getItem("expenseKubex.canInviteUsers") === "true";
+    const storedCanChangeRoles = localStorage.getItem("expenseKubex.canChangeRoles") === "true";
     setToken(storedToken);
     setEmail(storedEmail);
     setRole(storedRole);
+    setCanInviteUsers(storedCanInvite);
+    setCanChangeRoles(storedCanChangeRoles);
     setAuthReady(true);
   }, []);
 
   const canReviewTeamExpenses = role === "Manager" || role === "Hr" || role === "Finance" || role === "Admin";
+  const canAdminManageUsers = canInviteUsers || canChangeRoles;
+
+  useEffect(() => {
+    if (!canAdminManageUsers && activeTab === "admin") {
+      setActiveTab("home");
+    }
+  }, [activeTab, canAdminManageUsers]);
 
   const loadExpenses = useCallback(async () => {
     if (!token) {
@@ -207,18 +264,318 @@ export default function Home() {
     void loadTeamSubmittedExpenses();
   }, [token, canReviewTeamExpenses, loadTeamSubmittedExpenses]);
 
+  const loadEmployees = useCallback(async () => {
+    if (!token || !canAdminManageUsers) {
+      setEmployees([]);
+      setUserRoleDrafts({});
+      return;
+    }
+
+    setLoadingEmployees(true);
+    setEmployeesError(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/auth/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setEmployeesError("You do not have permission to view users.");
+        return;
+      }
+
+      if (!response.ok) {
+        setEmployeesError("Could not load employees.");
+        return;
+      }
+
+      const data = (await response.json()) as EmployeeUser[];
+      setEmployees(data);
+      setUserRoleDrafts(
+        Object.fromEntries(data.map((user) => [user.email, user.role]))
+      );
+    } catch {
+      setEmployeesError("Could not reach API for users.");
+    } finally {
+      setLoadingEmployees(false);
+    }
+  }, [apiBaseUrl, canAdminManageUsers, token]);
+
+  useEffect(() => {
+    if (!token || !canAdminManageUsers) {
+      return;
+    }
+
+    void loadEmployees();
+  }, [token, canAdminManageUsers, loadEmployees]);
+
+  const loadRoles = useCallback(async () => {
+    if (!token || !canAdminManageUsers) {
+      setRoles([]);
+      return;
+    }
+
+    setLoadingRoles(true);
+    setRolesError(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/roles`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        setRolesError("Could not load roles.");
+        return;
+      }
+
+      const data = (await response.json()) as AppRole[];
+      setRoles(data);
+    } catch {
+      setRolesError("Could not reach API for roles.");
+    } finally {
+      setLoadingRoles(false);
+    }
+  }, [apiBaseUrl, canAdminManageUsers, token]);
+
+  useEffect(() => {
+    if (!token || !canAdminManageUsers) {
+      return;
+    }
+
+    void loadRoles();
+  }, [token, canAdminManageUsers, loadRoles]);
+
+  async function onInviteUser(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!token || !canAdminManageUsers) {
+      setInviteError("Only admins can send invites.");
+      return;
+    }
+
+    const normalizedEmail = inviteEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setInviteError("Email is required.");
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteError(null);
+    setInviteSuccess(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/auth/admin/invite`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: normalizedEmail, role: inviteRole }),
+      });
+
+      if (!response.ok) {
+        let message = "Could not send invite.";
+        try {
+          const errorPayload = (await response.json()) as ApiError;
+          message = errorPayload.message ?? errorPayload.detail ?? message;
+        } catch {
+          // Keep generic message.
+        }
+        setInviteError(message);
+        return;
+      }
+
+      setInviteSuccess("Invite sent successfully.");
+      setInviteEmail("");
+      setInviteRole("Employee");
+      await loadEmployees();
+    } catch {
+      setInviteError("Could not reach API. Make sure backend is running.");
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
+  async function onUpdateUserRole(targetEmail: string) {
+    if (!token || !canAdminManageUsers || updatingUserEmail) {
+      return;
+    }
+
+    const selectedRole = userRoleDrafts[targetEmail] ?? "Employee";
+    setUpdatingUserEmail(targetEmail);
+    setInviteError(null);
+    setInviteSuccess(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/auth/users/role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: targetEmail, role: selectedRole }),
+      });
+
+      if (!response.ok) {
+        let message = "Could not update user role.";
+        try {
+          const errorPayload = (await response.json()) as ApiError;
+          message = errorPayload.message ?? errorPayload.detail ?? message;
+        } catch {
+          // Keep generic message.
+        }
+        setInviteError(message);
+        return;
+      }
+
+      setInviteSuccess(`Updated role for ${targetEmail}.`);
+      await loadEmployees();
+
+      if (targetEmail === email) {
+        localStorage.setItem("expenseKubex.role", selectedRole);
+        setRole(selectedRole);
+      }
+    } catch {
+      setInviteError("Could not reach API. Make sure backend is running.");
+    } finally {
+      setUpdatingUserEmail(null);
+    }
+  }
+
   function signOut() {
     localStorage.removeItem("expenseKubex.token");
     localStorage.removeItem("expenseKubex.email");
     localStorage.removeItem("expenseKubex.role");
+    localStorage.removeItem("expenseKubex.canInviteUsers");
+    localStorage.removeItem("expenseKubex.canChangeRoles");
     setToken(null);
     setEmail("");
     setRole("Employee");
+    setCanInviteUsers(false);
+    setCanChangeRoles(false);
     setExpenses([]);
     setTeamExpenses([]);
+    setEmployees([]);
+    setUserRoleDrafts({});
+    setRoles([]);
+    setInviteEmail("");
+    setInviteError(null);
+    setInviteSuccess(null);
+    setActiveTab("home");
+    setAdminSubTab("users");
     setMenuOpen(false);
     setSubmitSuccess(null);
     setSubmitError(null);
+  }
+
+  async function onSaveRole(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!token || !canAdminManageUsers) return;
+
+    const name = newRoleName.trim();
+    if (!name) {
+      setRoleFormError("Role name is required.");
+      return;
+    }
+
+    setRoleFormLoading(true);
+    setRoleFormError(null);
+    setRoleFormSuccess(null);
+
+    try {
+      const isEditing = editingRole !== null;
+      const url = isEditing
+        ? `${apiBaseUrl}/api/roles/${editingRole.id}`
+        : `${apiBaseUrl}/api/roles`;
+      const response = await fetch(url, {
+        method: isEditing ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, description: newRoleDescription.trim() || null, canInviteUsers: newRoleCanInviteUsers, canChangeRoles: newRoleCanChangeRoles }),
+      });
+
+      if (!response.ok) {
+        let message = isEditing ? "Could not update role." : "Could not create role.";
+        try {
+          const errorPayload = (await response.json()) as ApiError;
+          message = errorPayload.message ?? errorPayload.detail ?? message;
+        } catch { /* keep default */ }
+        setRoleFormError(message);
+        return;
+      }
+
+      setRoleFormSuccess(isEditing ? `Role '${name}' updated.` : `Role '${name}' created.`);
+      setNewRoleName("");
+      setNewRoleDescription("");
+      setNewRoleCanInviteUsers(false);
+      setNewRoleCanChangeRoles(false);
+      setEditingRole(null);
+      await loadRoles();
+    } catch {
+      setRoleFormError("Could not reach API.");
+    } finally {
+      setRoleFormLoading(false);
+    }
+  }
+
+  async function onDeleteRole(roleId: number, roleName: string) {
+    if (!token || !canAdminManageUsers || deletingRoleId) return;
+
+    const confirmed = window.confirm(`Delete role '${roleName}'? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingRoleId(roleId);
+    setRoleFormError(null);
+    setRoleFormSuccess(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/roles/${roleId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        let message = "Could not delete role.";
+        try {
+          const errorPayload = (await response.json()) as ApiError;
+          message = errorPayload.message ?? errorPayload.detail ?? message;
+        } catch { /* keep default */ }
+        setRoleFormError(message);
+        return;
+      }
+
+      setRoleFormSuccess(`Role '${roleName}' deleted.`);
+      await loadRoles();
+    } catch {
+      setRoleFormError("Could not reach API.");
+    } finally {
+      setDeletingRoleId(null);
+    }
+  }
+
+  function onEditRole(appRole: AppRole) {
+    setEditingRole(appRole);
+    setNewRoleName(appRole.name);
+    setNewRoleDescription(appRole.description ?? "");
+    setNewRoleCanInviteUsers(appRole.canInviteUsers);
+    setNewRoleCanChangeRoles(appRole.canChangeRoles);
+    setRoleFormError(null);
+    setRoleFormSuccess(null);
+  }
+
+  function onCancelRoleEdit() {
+    setEditingRole(null);
+    setNewRoleName("");
+    setNewRoleDescription("");
+    setNewRoleCanInviteUsers(false);
+    setNewRoleCanChangeRoles(false);
+    setRoleFormError(null);
+    setRoleFormSuccess(null);
   }
 
   async function onCreateExpense(event: React.FormEvent<HTMLFormElement>) {
@@ -601,12 +958,22 @@ export default function Home() {
       <aside className="sidebar">
         <div className="brand">expenseKubex</div>
         <nav className="side-nav">
-          <button className="side-link active" type="button">Home</button>
-          <button className="side-link" type="button">Add Receipts</button>
-          <button className="side-link" type="button">Wallet</button>
-          <button className="side-link" type="button">New Expense Report</button>
-          <button className="side-link" type="button">Drafts</button>
-          <button className="side-link" type="button">Reporting</button>
+          <button
+            className={`side-link ${activeTab === "home" ? "active" : ""}`}
+            type="button"
+            onClick={() => setActiveTab("home")}
+          >
+            Home
+          </button>
+          {canAdminManageUsers ? (
+            <button
+              className={`side-link ${activeTab === "admin" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("admin")}
+            >
+              Admin Panel
+            </button>
+          ) : null}
         </nav>
       </aside>
 
@@ -614,7 +981,11 @@ export default function Home() {
         <header className="topbar">
           <div>
             <h1 className="topbar-title">Expense Report</h1>
-            <p className="topbar-subtitle">Track and submit your expenses ({role})</p>
+            <p className="topbar-subtitle">
+              {activeTab === "admin"
+                ? `Manage users and invites (${role})`
+                : `Track and submit your expenses (${role})`}
+            </p>
           </div>
 
           <div className="profile-wrap">
@@ -638,6 +1009,8 @@ export default function Home() {
           </div>
         </header>
 
+        {activeTab === "home" ? (
+        <>
         <section className="panel">
           <div className="panel-header">
             <h2 className="panel-title">Expenses</h2>
@@ -907,6 +1280,279 @@ export default function Home() {
             </aside>
           ) : null}
         </div>
+        </>
+        ) : null}
+
+        {activeTab === "admin" && canAdminManageUsers ? (
+          <section className="panel">
+            <div className="panel-header">
+              <h2 className="panel-title">Admin Panel</h2>
+              <p className="panel-subtitle">Manage users, invites, and roles</p>
+            </div>
+
+            {/* Admin sub-tabs */}
+            <div className="admin-subtabs">
+              <button
+                type="button"
+                className={`admin-subtab${adminSubTab === "users" ? " active" : ""}`}
+                onClick={() => setAdminSubTab("users")}
+              >
+                Users
+              </button>
+              <button
+                type="button"
+                className={`admin-subtab${adminSubTab === "roles" ? " active" : ""}`}
+                onClick={() => setAdminSubTab("roles")}
+              >
+                Roles
+              </button>
+            </div>
+
+            {/* Users sub-tab */}
+            {adminSubTab === "users" ? (
+              <>
+                <form className="admin-invite-form" onSubmit={onInviteUser}>
+                  <label>
+                    Invite by email
+                    <input
+                      className="dashboard-input"
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="employee@company.com"
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Role
+                    <select
+                      className="dashboard-input"
+                      value={inviteRole}
+                      onChange={(event) => setInviteRole(event.target.value)}
+                    >
+                      {roles.length > 0
+                        ? roles.map((r) => (
+                            <option key={r.id} value={r.name}>
+                              {r.name}
+                            </option>
+                          ))
+                        : <option value="Employee">Employee</option>}
+                    </select>
+                  </label>
+
+                  <button
+                    className="auth-button admin-invite-button"
+                    type="submit"
+                    disabled={inviteLoading || !canInviteUsers}
+                    title={!canInviteUsers ? "Your role does not have permission to invite users" : undefined}
+                  >
+                    {inviteLoading ? "Sending invite..." : "Invite"}
+                  </button>
+                </form>
+
+                {inviteError ? <p className="auth-banner error" style={{ marginBottom: 12 }}>{inviteError}</p> : null}
+                {inviteSuccess ? <p className="auth-banner success" style={{ marginBottom: 12 }}>{inviteSuccess}</p> : null}
+                {employeesError ? <p className="auth-banner error" style={{ marginBottom: 12 }}>{employeesError}</p> : null}
+                {loadingEmployees ? <p className="panel-subtitle">Loading employees...</p> : null}
+
+                {!loadingEmployees && !employees.length ? (
+                  <p className="panel-subtitle">No employees found in the database.</p>
+                ) : null}
+
+                {!!employees.length ? (
+                  <div className="table-wrap">
+                    <table className="expense-table">
+                      <thead>
+                        <tr>
+                          <th>Email</th>
+                          <th>Role</th>
+                          <th>Created</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {employees.map((user) => (
+                          <tr key={user.id}>
+                            <td>{user.email}</td>
+                            <td>
+                              <select
+                                className="dashboard-input admin-role-select"
+                                value={userRoleDrafts[user.email] ?? user.role}
+                                onChange={(event) =>
+                                  setUserRoleDrafts((previous) => ({
+                                    ...previous,
+                                    [user.email]: event.target.value,
+                                  }))
+                                }
+                              >
+                                {roles.length > 0
+                                  ? roles.map((r) => (
+                                      <option key={r.id} value={r.name}>
+                                        {r.name}
+                                      </option>
+                                    ))
+                                  : <option value={user.role}>{user.role}</option>}
+                              </select>
+                            </td>
+                            <td>{new Date(user.createdAtUtc).toISOString().slice(0, 10)}</td>
+                            <td>
+                              <button
+                                className="table-action-button"
+                                type="button"
+                                onClick={() => onUpdateUserRole(user.email)}
+                                disabled={updatingUserEmail === user.email || userRoleDrafts[user.email] === user.role || !canChangeRoles}
+                                title={!canChangeRoles ? "Your role does not have permission to change roles" : undefined}
+                              >
+                                {updatingUserEmail === user.email ? "Saving..." : "Update role"}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+
+            {/* Roles sub-tab */}
+            {adminSubTab === "roles" ? (
+              <>
+                <form className="admin-invite-form" onSubmit={onSaveRole} style={{ marginBottom: 20, gridTemplateColumns: "1fr" }}>
+                  <h3 className="panel-title" style={{ fontSize: "1rem", marginBottom: 8 }}>
+                    {editingRole ? `Edit Role: ${editingRole.name}` : "Add New Role"}
+                  </h3>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 1fr) minmax(200px, 1.5fr)", gap: "0.7rem", alignItems: "end" }}>
+                    <label>
+                      Name
+                      <input
+                        className="dashboard-input"
+                        type="text"
+                      value={newRoleName}
+                        onChange={(event) => setNewRoleName(event.target.value)}
+                        placeholder="e.g. Auditor"
+                        required
+                        maxLength={50}
+                      />
+                    </label>
+
+                    <label>
+                      Description <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span>
+                      <input
+                        className="dashboard-input"
+                        type="text"
+                        value={newRoleDescription}
+                        onChange={(event) => setNewRoleDescription(event.target.value)}
+                        placeholder="Brief description of this role"
+                        maxLength={255}
+                      />
+                    </label>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "1.5rem", marginTop: 4, flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+                      <input
+                        type="checkbox"
+                        checked={newRoleCanInviteUsers}
+                        onChange={(e) => setNewRoleCanInviteUsers(e.target.checked)}
+                      />
+                      Can invite users
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 500 }}>
+                      <input
+                        type="checkbox"
+                        checked={newRoleCanChangeRoles}
+                        onChange={(e) => setNewRoleCanChangeRoles(e.target.checked)}
+                      />
+                      Can change roles
+                    </label>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                    <button
+                      className="auth-button admin-invite-button"
+                      type="submit"
+                      disabled={roleFormLoading || !canChangeRoles}
+                      title={!canChangeRoles ? "Your role does not have permission to manage roles" : undefined}
+                    >
+                      {roleFormLoading ? "Saving..." : editingRole ? "Update Role" : "Create Role"}
+                    </button>
+                    {editingRole ? (
+                      <button
+                        className="auth-button auth-button-secondary"
+                        type="button"
+                        onClick={onCancelRoleEdit}
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
+
+                {roleFormError ? <p className="auth-banner error" style={{ marginBottom: 12 }}>{roleFormError}</p> : null}
+                {roleFormSuccess ? <p className="auth-banner success" style={{ marginBottom: 12 }}>{roleFormSuccess}</p> : null}
+                {rolesError ? <p className="auth-banner error" style={{ marginBottom: 12 }}>{rolesError}</p> : null}
+                {loadingRoles ? <p className="panel-subtitle">Loading roles...</p> : null}
+
+                {!loadingRoles && !roles.length ? (
+                  <p className="panel-subtitle">No roles defined yet.</p>
+                ) : null}
+
+                {!!roles.length ? (
+                  <div className="table-wrap">
+                    <table className="expense-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Description</th>
+                          <th>Can Invite</th>
+                          <th>Can Change Roles</th>
+                          <th>Created</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {roles.map((appRole) => (
+                          <tr key={appRole.id}>
+                            <td><strong>{appRole.name}</strong></td>
+                            <td>{appRole.description ?? <span style={{ opacity: 0.5 }}>—</span>}</td>
+                            <td style={{ textAlign: "center" }}>{appRole.canInviteUsers ? "✓" : <span style={{ opacity: 0.35 }}>—</span>}</td>
+                            <td style={{ textAlign: "center" }}>{appRole.canChangeRoles ? "✓" : <span style={{ opacity: 0.35 }}>—</span>}</td>
+                            <td>{new Date(appRole.createdAtUtc).toISOString().slice(0, 10)}</td>
+                            <td>
+                            <div className="table-actions">
+                              <button
+                                className="table-action-button"
+                                type="button"
+                                onClick={() => onEditRole(appRole)}
+                                disabled={deletingRoleId === appRole.id || !canChangeRoles}
+                                title={!canChangeRoles ? "Your role does not have permission to manage roles" : undefined}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="table-action-button danger"
+                                type="button"
+                                onClick={() => onDeleteRole(appRole.id, appRole.name)}
+                                disabled={deletingRoleId === appRole.id || !canChangeRoles}
+                                title={!canChangeRoles ? "Your role does not have permission to manage roles" : undefined}
+                              >
+                                {deletingRoleId === appRole.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </section>
+        ) : null}
       </section>
     </main>
   );

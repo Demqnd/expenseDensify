@@ -102,6 +102,50 @@ using (var scope = app.Services.CreateScope())
         SET ""Role"" = 'Employee'
         WHERE ""Role"" IS NULL OR ""Role"" = '';
     ");
+
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        CREATE TABLE IF NOT EXISTS roles (
+            ""Id"" SERIAL PRIMARY KEY,
+            ""Name"" character varying(50) NOT NULL,
+            ""Description"" character varying(255) NULL,
+            ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT NOW(),
+            CONSTRAINT ""roles_name_unique"" UNIQUE (""Name"")
+        );
+    ");
+
+    // Add permission columns if they don't yet exist (idempotent).
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE roles
+        ADD COLUMN IF NOT EXISTS ""CanInviteUsers"" boolean NOT NULL DEFAULT FALSE;
+    ");
+    await dbContext.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE roles
+        ADD COLUMN IF NOT EXISTS ""CanChangeRoles"" boolean NOT NULL DEFAULT FALSE;
+    ");
+
+    if (!await dbContext.Roles.AnyAsync())
+    {
+        dbContext.Roles.AddRange(
+            new AppRole { Name = UserRoles.Employee, Description = "Standard employee access",             CanInviteUsers = false, CanChangeRoles = false, CreatedAtUtc = DateTime.UtcNow },
+            new AppRole { Name = UserRoles.Manager,  Description = "Can review and approve team expenses", CanInviteUsers = false, CanChangeRoles = false, CreatedAtUtc = DateTime.UtcNow },
+            new AppRole { Name = UserRoles.Hr,       Description = "HR department access",                 CanInviteUsers = true,  CanChangeRoles = false, CreatedAtUtc = DateTime.UtcNow },
+            new AppRole { Name = UserRoles.Finance,  Description = "Finance department access",            CanInviteUsers = false, CanChangeRoles = false, CreatedAtUtc = DateTime.UtcNow },
+            new AppRole { Name = UserRoles.Admin,    Description = "Full system administration access",    CanInviteUsers = true,  CanChangeRoles = true,  CreatedAtUtc = DateTime.UtcNow }
+        );
+        await dbContext.SaveChangesAsync();
+    }
+    else
+    {
+        // Ensure the Admin role always has full permissions even if already seeded.
+        var adminRole = await dbContext.Roles.FirstOrDefaultAsync(r =>
+            r.Name.ToLower() == UserRoles.Admin.ToLower());
+        if (adminRole is not null && (!adminRole.CanInviteUsers || !adminRole.CanChangeRoles))
+        {
+            adminRole.CanInviteUsers = true;
+            adminRole.CanChangeRoles = true;
+            await dbContext.SaveChangesAsync();
+        }
+    }
 }
 
 app.UseSwagger();

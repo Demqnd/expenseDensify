@@ -8,6 +8,8 @@ type AuthSuccess = {
   token: string;
   email: string;
   role: string;
+  canInviteUsers: boolean;
+  canChangeRoles: boolean;
 };
 
 type ApiError = {
@@ -59,6 +61,8 @@ export default function LoginPage() {
       localStorage.setItem("expenseKubex.token", auth.token);
       localStorage.setItem("expenseKubex.email", auth.email);
       localStorage.setItem("expenseKubex.role", auth.role);
+      localStorage.setItem("expenseKubex.canInviteUsers", String(auth.canInviteUsers ?? false));
+      localStorage.setItem("expenseKubex.canChangeRoles", String(auth.canChangeRoles ?? false));
       setSuccess("Login successful. Redirecting...");
       setTimeout(() => router.push("/"), 500);
     } catch {
@@ -117,10 +121,6 @@ export default function LoginPage() {
 
         <p className="auth-footer">
           New here? <Link className="auth-link" href="/signup">Create an account</Link>
-        </p>
-
-        <p className="auth-footer">
-          Have a reset code? <Link className="auth-link" href="/reset-password">Reset password</Link>
         </p>
       </section>
     </main>

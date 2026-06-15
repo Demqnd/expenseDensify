@@ -12,13 +12,15 @@ public class JwtTokenService(IOptions<JwtSettings> jwtOptions) : IJwtTokenServic
 {
     private readonly JwtSettings _jwtSettings = jwtOptions.Value;
 
-    public string CreateToken(User user)
+    public string CreateToken(User user, bool canInviteUsers = false, bool canChangeRoles = false)
     {
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role),
+            new Claim("CanInviteUsers", canInviteUsers ? "true" : "false"),
+            new Claim("CanChangeRoles", canChangeRoles ? "true" : "false"),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

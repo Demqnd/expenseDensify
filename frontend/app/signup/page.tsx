@@ -8,6 +8,8 @@ type AuthSuccess = {
   token: string;
   email: string;
   role: string;
+  canInviteUsers: boolean;
+  canChangeRoles: boolean;
 };
 
 type ApiError = {
@@ -71,6 +73,8 @@ export default function SignupPage() {
       localStorage.setItem("expenseKubex.token", auth.token);
       localStorage.setItem("expenseKubex.email", auth.email);
       localStorage.setItem("expenseKubex.role", auth.role);
+      localStorage.setItem("expenseKubex.canInviteUsers", String(auth.canInviteUsers ?? false));
+      localStorage.setItem("expenseKubex.canChangeRoles", String(auth.canChangeRoles ?? false));
       setSuccess("Account created. Redirecting...");
       setTimeout(() => router.push("/"), 500);
     } catch {

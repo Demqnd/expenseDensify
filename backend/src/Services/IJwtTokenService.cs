@@ -4,5 +4,5 @@ namespace expenseKubex.Services;
 
 public interface IJwtTokenService
 {
-    string CreateToken(User user);
+    string CreateToken(User user, bool canInviteUsers = false, bool canChangeRoles = false);
 }

@@ -25,24 +25,96 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [codeVerified, setCodeVerified] = useState(false);
   const hasEmail = email.trim().length > 0;
-  const hasCode = code.trim().length > 0;
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
+    const stageParam = searchParams.get("stage");
 
     if (emailParam) {
       setEmail(emailParam);
+    } else {
+      const rememberedEmail = localStorage.getItem("expenseKubex.resetEmail");
+      if (rememberedEmail) {
+        setEmail(rememberedEmail);
+      }
+    }
+
+    if (stageParam === "password") {
+      const verifiedEmail = sessionStorage.getItem("expenseKubex.resetVerifiedEmail");
+      const verifiedCode = sessionStorage.getItem("expenseKubex.resetVerifiedCode");
+      const effectiveEmail = (emailParam ?? localStorage.getItem("expenseKubex.resetEmail") ?? "").trim().toLowerCase();
+
+      if (verifiedEmail && verifiedCode && verifiedEmail === effectiveEmail) {
+        setCodeVerified(true);
+        setCode(verifiedCode);
+      }
     }
   }, [searchParams]);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onVerifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setMessage(null);
 
     if (!hasEmail) {
       setError("Missing email in reset link. Request a new reset email and open that link.");
+      return;
+    }
+
+    if (!code.trim()) {
+      setError("Reset code is required.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/auth/verify-reset-code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          code,
+        }),
+      });
+
+      const json = (await response.json()) as ApiResponse;
+
+      if (!response.ok) {
+        setError(json.message ?? "Could not verify code.");
+        return;
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedCode = code.trim();
+      sessionStorage.setItem("expenseKubex.resetVerifiedEmail", normalizedEmail);
+      sessionStorage.setItem("expenseKubex.resetVerifiedCode", normalizedCode);
+      setCodeVerified(true);
+      setMessage(json.message ?? "Code verified. Set your new password.");
+      router.replace(`/reset-password?email=${encodeURIComponent(normalizedEmail)}&stage=password`);
+    } catch {
+      setError("Could not reach API. Make sure backend is running.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onResetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!hasEmail) {
+      setError("Missing email in reset link. Request a new reset email and open that link.");
+      return;
+    }
+
+    if (!codeVerified) {
+      setError("Please verify your reset code first.");
       return;
     }
 
@@ -79,6 +151,9 @@ function ResetPasswordContent() {
       }
 
       setMessage(json.message ?? "Password reset successful.");
+      localStorage.removeItem("expenseKubex.resetEmail");
+      sessionStorage.removeItem("expenseKubex.resetVerifiedEmail");
+      sessionStorage.removeItem("expenseKubex.resetVerifiedCode");
       setTimeout(() => router.push("/login"), 900);
     } catch {
       setError("Could not reach API. Make sure backend is running.");
@@ -93,64 +168,78 @@ function ResetPasswordContent() {
         <h1 className="auth-title">Reset password</h1>
         <p className="auth-subtitle">
           {hasEmail
-            ? `We sent a reset code to ${email}. Enter the code below to continue.`
-            : "Open this page from your reset email link, then enter your reset code."}
+            ? codeVerified
+              ? `Code confirmed for ${email}. Choose your new password.`
+              : `We sent a reset code to ${email}. Enter the code and press Verify code.`
+            : "Start from Forgot password so we can send your code and link this page to your email."}
         </p>
 
-        <form className="auth-form" onSubmit={onSubmit}>
-          <label className="auth-label" htmlFor="code">
-            Reset code
-          </label>
-          <input
-            id="code"
-            className="auth-input"
-            type="text"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            required
-          />
+        {!hasEmail ? (
+          <div className="auth-form">
+            <p className="auth-banner error">Email context missing. Please request a reset code first.</p>
+            <Link className="auth-button" href="/forgot-password">
+              Go to Forgot password
+            </Link>
+          </div>
+        ) : codeVerified ? (
+          <form className="auth-form" onSubmit={onResetPassword}>
+            {error ? <p className="auth-banner error">{error}</p> : null}
+            {message ? <p className="auth-banner success">{message}</p> : null}
 
-          {hasCode ? (
-            <>
-              <label className="auth-label" htmlFor="newPassword">
-                New password
-              </label>
-              <input
-                id="newPassword"
-                className="auth-input"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                required
-                minLength={8}
-              />
+            <label className="auth-label" htmlFor="newPassword">
+              New password
+            </label>
+            <input
+              id="newPassword"
+              className="auth-input"
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              required
+              minLength={8}
+            />
 
-              <label className="auth-label" htmlFor="confirmPassword">
-                Confirm new password
-              </label>
-              <input
-                id="confirmPassword"
-                className="auth-input"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-                minLength={8}
-              />
-            </>
-          ) : (
-            <p className="auth-banner success">Enter the code first, then choose a new password.</p>
-          )}
+            <label className="auth-label" htmlFor="confirmPassword">
+              Confirm new password
+            </label>
+            <input
+              id="confirmPassword"
+              className="auth-input"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              required
+              minLength={8}
+            />
 
-          {error ? <p className="auth-banner error">{error}</p> : null}
-          {message ? <p className="auth-banner success">{message}</p> : null}
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Resetting..." : "Reset password"}
+            </button>
+          </form>
+        ) : (
+          <form className="auth-form" onSubmit={onVerifyCode}>
+            <label className="auth-label" htmlFor="code">
+              Reset code
+            </label>
+            <input
+              id="code"
+              className="auth-input"
+              type="text"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              required
+            />
 
-          <button className="auth-button" type="submit" disabled={loading || !hasCode || !hasEmail}>
-            {loading ? "Resetting..." : "Reset password"}
-          </button>
-        </form>
+            {error ? <p className="auth-banner error">{error}</p> : null}
+            {message ? <p className="auth-banner success">{message}</p> : null}
+
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Checking code..." : "Verify code"}
+            </button>
+          </form>
+        )}
 
         <p className="auth-footer">
           <Link className="auth-link" href="/login">Back to login</Link>
