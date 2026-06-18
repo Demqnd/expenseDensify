@@ -35,7 +35,7 @@ Upon completion of this project, the developer should have exposure to:
 - Backend development
 - Relational databases
 - REST APIs
-- Authentication and authorization
+- Authentication and authorization (look into Google Authorization (Oauth))
 
 ## AI Integration
 
@@ -52,6 +52,7 @@ Upon completion of this project, the developer should have exposure to:
 - Code reviews
 - CI/CD pipelines
 - Automated testing
+- IAC (infrastrcture as code)
 
 ## Cloud & Infrastructure
 

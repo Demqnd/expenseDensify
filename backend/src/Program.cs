@@ -34,7 +34,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
+        policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:3003")
             .AllowAnyMethod()
             .AllowAnyHeader();
     });
@@ -78,7 +78,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
+    await dbContext.Database.EnsureCreatedAsync();
     dbContext.Database.ExecuteSqlRaw($"ALTER TABLE expenses ADD COLUMN IF NOT EXISTS \"Status\" character varying(20) NOT NULL DEFAULT '{Expense.DraftStatus}';");
     await dbContext.Database.ExecuteSqlRawAsync(@"
         ALTER TABLE expenses
