@@ -52,13 +52,8 @@ builder.Services.AddHttpClient("OcrService", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(45);
 });
-builder.Services.AddHttpClient("Webhook", client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(15);
-});
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IEmailSender, GmailSmtpEmailSender>();
-builder.Services.AddScoped<IWebhookMessageSender, WebhookMessageSender>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
     ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
@@ -126,15 +121,6 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.ExecuteSqlRawAsync(@"
         ALTER TABLE roles
         ADD COLUMN IF NOT EXISTS ""CanChangeRoles"" boolean NOT NULL DEFAULT FALSE;
-    ");
-
-    await dbContext.Database.ExecuteSqlRawAsync(@"
-        CREATE TABLE IF NOT EXISTS webhook_routines (
-            ""Id"" SERIAL PRIMARY KEY,
-            ""Url"" character varying(2048) NOT NULL,
-            ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT NOW(),
-            ""UpdatedByUserId"" uuid NULL
-        );
     ");
 
     if (!await dbContext.Roles.AnyAsync())
