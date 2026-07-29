@@ -1,5 +1,5 @@
 using System.Text;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 
 namespace expenseKubex.Services;
 
@@ -14,37 +14,7 @@ public class WebhookMessageSender(IHttpClientFactory httpClientFactory) : IWebho
         }
 
         var client = httpClientFactory.CreateClient("Webhook");
-
-        var card = new JsonObject
-        {
-            ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
-            ["type"] = "AdaptiveCard",
-            ["version"] = "1.4",
-            ["body"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["type"] = "TextBlock",
-                    ["text"] = message,
-                    ["wrap"] = true
-                }
-            }
-        };
-
-        var payloadNode = new JsonObject
-        {
-            ["type"] = "message",
-            ["attachments"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["contentType"] = "application/vnd.microsoft.card.adaptive",
-                    ["content"] = card
-                }
-            }
-        };
-
-        var payload = payloadNode.ToJsonString();
+        var payload = JsonSerializer.Serialize(new { text = message });
 
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
         using var response = await client.PostAsync(uri, content, cancellationToken);
