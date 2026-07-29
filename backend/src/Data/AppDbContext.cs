@@ -8,6 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users => Set<User>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<AppRole> Roles => Set<AppRole>();
+    public DbSet<WebhookRoutine> WebhookRoutines => Set<WebhookRoutine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +60,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(r => r.CanInviteUsers).IsRequired().HasDefaultValue(false);
             entity.Property(r => r.CanChangeRoles).IsRequired().HasDefaultValue(false);
             entity.Property(r => r.CreatedAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<WebhookRoutine>(entity =>
+        {
+            entity.ToTable("webhook_routines");
+            entity.HasKey(w => w.Id);
+            entity.Property(w => w.Url).IsRequired().HasMaxLength(2048);
+            entity.Property(w => w.UpdatedAtUtc).IsRequired();
+            entity.Property(w => w.UpdatedByUserId);
         });
     }
 }
